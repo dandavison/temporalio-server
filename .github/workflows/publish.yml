@@ -9,8 +9,31 @@ permissions:
   id-token: write
 
 jobs:
-  build_and_publish:
-    name: Build and publish on ${{ matrix.os }}
+  build_sdist_and_publish:
+    name: Build sdist and publish
+    runs-on: ubuntu-latest # sdist is platform-independent
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      # Verify version here too for completeness, though not strictly necessary
+      - name: Verify Git tag matches pyproject.toml version
+        run: python .github/scripts/check_version.py
+
+      - name: Build source distribution (sdist)
+        run: uv build --sdist -o dist/
+        # This should NOT trigger the build hook
+
+      - name: Publish sdist to PyPI
+        run: uv publish dist/*.tar.gz
+        # uv will use OIDC via the id-token permission
+
+  build_wheels_and_publish:
+    name: Build wheels and publish on ${{ matrix.os }}
+    needs: build_sdist_and_publish # Optional: run after sdist
     runs-on: ${{ matrix.os }}
     strategy:
       # Ensure all platforms complete even if one fails
@@ -26,18 +49,16 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Verify Git tag matches pyproject.toml version
-        run: .github/scripts/check_version.py
+      # No version check needed here if sdist job does it
 
-      - name: Build distributions (sdist and wheel)
-        run: uv build --no-sources -o dist/
+      - name: Build wheel distribution
+        run: uv build --wheel -o dist/
         # This runs the hatchling build hook which downloads the correct
         # binary for the *current* runner OS (matrix.os).
-        # The resulting wheel will be py3-none-any but contain the native binary.
 
-      - name: Publish distributions to PyPI
+      - name: Publish wheel to PyPI
         # Publish directly from each build job
         # This avoids complexity of combining artifacts later
         # PyPI handles duplicate uploads gracefully (ignores them)
-        run: uv publish dist/*
+        run: uv publish dist/*.whl
         # uv will use OIDC via the id-token permission 
