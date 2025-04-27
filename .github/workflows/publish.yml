@@ -23,9 +23,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Used by cibuildwheel to build the wheels
       - name: Set up uv
-        uses: astral-sh/setup-uv@v1 # Update to v1 (latest stable)
+        uses: astral-sh/setup-uv@v5
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.19
@@ -47,7 +46,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v5
 
       - name: Build sdist
         run: uv build --sdist --no-sources -o dist/
@@ -69,7 +68,7 @@ jobs:
 
     steps:
       - name: Set up uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v5
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
