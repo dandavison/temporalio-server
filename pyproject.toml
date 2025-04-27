@@ -47,12 +47,6 @@ class = "CustomBuildHook"
 [tool.hatch.build.targets.wheel]
 # Include the main package directory
 packages = ["src/temporalio_server"]
-# Explicitly include the directory containing the downloaded binary
-# Ensure this path matches the TARGET_DIR in the build hook script relative to the src dir
-include = [
-    "/src/temporalio_server/bin",
-]
-# Ensure the build hook runs for wheel builds
 build-hooks = ["custom"]
 
 # Configure what goes into the source distribution (sdist)
