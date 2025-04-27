@@ -62,7 +62,8 @@ def run():
 
         # Pass all command-line arguments received by this script
         # directly to the temporal binary
-        args = [binary_path_str] + ["server"] + sys.argv[1:]
+        # Add --log-level error to suppress WARN messages from the server itself
+        args = [binary_path_str] + ["server", "--log-level", "error"] + sys.argv[1:]
 
         log.info(f"Executing: {' '.join(args)}")
 
