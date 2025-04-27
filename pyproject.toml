@@ -1,0 +1,14 @@
+[project]
+name = "temporalio-server"
+version = "0.1.0"
+description = "Temporal development server"
+readme = "README.md"
+authors = [
+    { name = "Dan Davison", email = "dan.davison@temporal.io" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
