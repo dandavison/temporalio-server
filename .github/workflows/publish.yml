@@ -32,33 +32,54 @@ jobs:
         # uv will use OIDC via the id-token permission
 
   build_wheels_and_publish:
-    name: Build wheels and publish on ${{ matrix.os }}
+    name: Build wheels and publish
     needs: build_sdist_and_publish # Optional: run after sdist
-    runs-on: ${{ matrix.os }}
-    strategy:
-      # Ensure all platforms complete even if one fails
-      fail-fast: false
-      matrix:
-        # Platforms to build native wheels for
-        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+    # Run on ubuntu, cibuildwheel uses containers for linux and can cross-compile or use native runners if configured
+    runs-on: ubuntu-latest
+    # Removed matrix strategy
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Fetch history needed by setuptools-scm or other Git-based versioning
+          fetch-depth: 0
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+      - name: Set up QEMU for cross-compilation (if needed)
+        # Needed for building ARM64 wheels on x86_64 runners
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all # Or specify 'arm64'
 
-      # No version check needed here if sdist job does it
+      - name: Build wheels using cibuildwheel
+        uses: pypa/cibuildwheel@v2.19.0
+        env:
+          # Configure cibuildwheel to build for desired archs
+          # 'auto' lets cibuildwheel decide based on runner/QEMU
+          # 'auto64' limits to 64-bit archs
+          CIBW_ARCHS_LINUX: auto64
+          CIBW_ARCHS_MACOS: auto # Will build x86_64 and arm64
+          CIBW_ARCHS_WINDOWS: auto64 # Build AMD64
+          # Skip Python 3.8 as our requires-python starts at 3.9
+          CIBW_SKIP: "cp38-* pp38-*"
+          # Set build verbosity
+          CIBW_BUILD_VERBOSITY: 1
+          # --- Publishing Configuration ---
+          # Tell cibuildwheel to run twine after building wheels
+          # Needs TWINE_USERNAME and TWINE_PASSWORD (OIDC token)
+          # Use __token__ for username with PyPI tokens/OIDC
+          TWINE_USERNAME: __token__
+          # The GITHUB_TOKEN provides the OIDC token automatically to twine > 3.7.1
+          # cibuildwheel should make this available, but explicitly pass if needed.
+          # TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }} # Usually not needed for OIDC
+          # We might need to install twine first
+          CIBW_BEFORE_DEPLOY: "pip install twine"
+          # Command to run for deploying
+          CIBW_DEPLOY_COMMAND: "twine upload --repository-url https://upload.pypi.org/legacy/ --non-interactive --skip-existing {wheel}"
+        with:
+          # Pass the OIDC token from GitHub Actions to cibuildwheel/twine
+          # Note: twine >= 3.7.1 detects GitHub OIDC automatically if TWINE_USERNAME=__token__
+          # and GITHUB_ACTIONS is true, so this might be redundant but explicit.
+          TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build wheel distribution
-        run: uv build --wheel -o dist/
-        # This runs the hatchling build hook which downloads the correct
-        # binary for the *current* runner OS (matrix.os).
-
-      - name: Publish wheel to PyPI
-        # Publish directly from each build job
-        # This avoids complexity of combining artifacts later
-        # PyPI handles duplicate uploads gracefully (ignores them)
-        run: uv publish dist/*.whl
-        # uv will use OIDC via the id-token permission 
+      # Removed previous build and publish steps as cibuildwheel handles it 
