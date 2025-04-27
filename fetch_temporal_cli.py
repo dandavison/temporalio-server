@@ -32,6 +32,10 @@ class CustomBuildHook(BuildHookInterface):
             log.info(f"Skipping hook for target: {self.target_name}")
             return
 
+        # *** Signal Hatchling to infer platform-specific wheel tags ***
+        log.info("Setting infer_tag = True in build_data")
+        build_data["infer_tag"] = True
+
         # Determine the target directory within the build environment
         # Hatchling provides the build directory structure.
         # We need to place the binary relative to the package source root.

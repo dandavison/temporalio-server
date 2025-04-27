@@ -1,6 +1,6 @@
 [project]
 name = "dandavison-temporalio-server"
-version = "0.1.5"
+version = "0.1.9"
 description = "Python wrapper for the Temporal development server CLI"
 readme = "README.md"
 authors = [
@@ -36,6 +36,7 @@ class = "CustomBuildHook"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/temporalio_server"]
+sources = ["src"]
 build-hooks = ["custom"]
 force-include = { "src/temporalio_server/bin" = "temporalio_server/bin" }
 
