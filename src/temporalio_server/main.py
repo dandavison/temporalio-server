@@ -72,10 +72,22 @@ def run():
         # but avoid if possible for security. Use full path to binary.
         process = subprocess.Popen(args)
 
-        # Wait for the process to complete and capture the exit code
-        process.wait()
-        log.info(f"temporal process exited with code {process.returncode}")
-        sys.exit(process.returncode)  # Exit with the same code as the temporal CLI
+        # Wait for the process to complete, ignoring KeyboardInterrupt
+        exit_code = None
+        while exit_code is None:
+            try:
+                exit_code = process.wait()  # Wait indefinitely until child exits
+            except KeyboardInterrupt:
+                # OS sent SIGINT to child too, child is shutting down.
+                # We ignore the interrupt in the wrapper and continue waiting
+                # for the child to exit cleanly.
+                log.info(
+                    "KeyboardInterrupt caught; waiting for temporal process to exit..."
+                )
+                pass  # Continue waiting in the loop
+
+        log.info(f"temporal process exited with code {exit_code}")
+        sys.exit(exit_code)
 
     except FileNotFoundError:
         # Use binary_path_str which holds the path string if get_binary_path succeeded
@@ -84,11 +96,6 @@ def run():
             exc_info=True,
         )
         sys.exit(1)
-    except KeyboardInterrupt:
-        log.info("Received KeyboardInterrupt, exiting.")
-        # Let the finally block handle cleanup if needed, exit gracefully
-        # Common practice is to exit non-zero on interrupt, e.g., 130 for SIGINT.
-        sys.exit(130)
     except Exception as e:
         log.error(f"Error executing temporal binary: {e}", exc_info=True)
         sys.exit(1)
