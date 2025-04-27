@@ -9,6 +9,7 @@ authors = [
 ]
 # Updated requires-python to match modern importlib.resources usage
 requires-python = ">=3.9"
+# Core dependencies are now empty, as the main package only provides the wrapper
 dependencies = []
 # Add classifiers for PyPI visibility
 classifiers = [
@@ -62,3 +63,9 @@ exclude = [
 ]
 # Do NOT run the custom build hook for sdist builds
 # build-hooks = [] # Explicitly empty or omit
+
+[project.optional-dependencies]
+# Add an 'examples' extra that includes the SDK needed for example.py
+examples = [
+    "temporalio>=1.0.0",
+]

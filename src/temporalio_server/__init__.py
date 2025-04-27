@@ -1,8 +1,8 @@
 # This file makes src/temporalio_server a Python package
 
+import asyncio
 import logging
 import platform
-import socket
 import subprocess
 import time
 from importlib import resources
@@ -38,7 +38,7 @@ def get_binary_path() -> Path:
 
 
 class DevServer:
-    """Manages a Temporal development server subprocess using a context manager."""
+    """Manages a Temporal development server subprocess using an async context manager."""
 
     def __init__(
         self,
@@ -72,14 +72,14 @@ class DevServer:
         self.ip = ip
         self.log_level = log_level
         self.extra_args = extra_args
-        self.process: Optional[subprocess.Popen] = None
+        self.process: Optional[asyncio.subprocess.Process] = None
 
     @property
     def target(self) -> str:
         """Target string for Temporal Client connection."""
         return f"{self.ip}:{self.port}"
 
-    def __enter__(self) -> "DevServer":
+    async def __aenter__(self) -> "DevServer":
         """Start the server process and wait for it to be ready."""
         binary_path = get_binary_path()
         args: List[str] = [
@@ -108,90 +108,151 @@ class DevServer:
         args.extend(self.extra_args)
 
         log.info(f"Starting Temporal server: {' '.join(args)}")
-        # Start process - capture stderr to check for readiness/errors if needed
-        self.process = subprocess.Popen(args, stderr=subprocess.PIPE)
+        # Use asyncio.create_subprocess_exec
+        try:
+            self.process = await asyncio.create_subprocess_exec(
+                args[0],  # Program path
+                *args[1:],  # Arguments
+                stdout=subprocess.PIPE,  # Capture stdout for potential debugging
+                stderr=subprocess.PIPE,  # Capture stderr for readiness/errors
+            )
+            log.debug(f"Server process started with PID: {self.process.pid}")
+        except Exception as e:
+            log.error(f"Failed to create server subprocess: {e}", exc_info=True)
+            raise RuntimeError("Failed to start Temporal server process") from e
 
         # Wait for server readiness
         try:
-            self._wait_for_server_ready()
+            await self._wait_for_server_ready()
         except Exception:
             log.error("Failed to start Temporal server. Terminating process.")
-            self._terminate_process()
-            raise  # Re-raise the exception
+            await self._terminate_process()
+            raise
 
         log.info(f"Temporal server ready on {self.target}")
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Terminate the server process."""
         log.info("Shutting down Temporal server...")
-        self._terminate_process()
+        await self._terminate_process()
         log.info("Temporal server shut down.")
 
-    def _terminate_process(self) -> None:
-        """Send signals to terminate the managed process."""
-        if not self.process or self.process.poll() is not None:
+    async def _terminate_process(self) -> None:
+        """Send signals to terminate the managed asyncio process."""
+        if not self.process or self.process.returncode is not None:
             log.debug("Server process already terminated or not started.")
             return
 
-        log.debug("Sending SIGINT/terminate() to temporal process...")
-        self.process.terminate()  # SIGTERM on POSIX, TerminateProcess on Win
+        log.debug(f"Sending SIGTERM to temporal process {self.process.pid}...")
         try:
-            exit_code = self.process.wait(timeout=10)
-            log.debug(f"Server process terminated gracefully with code {exit_code}.")
-        except subprocess.TimeoutExpired:
-            log.warning(
-                "Server process did not exit gracefully after 10s, sending SIGKILL/kill()."
+            self.process.terminate()
+            await asyncio.wait_for(self.process.wait(), timeout=10)
+            log.debug(
+                f"Server process {self.process.pid} terminated gracefully with code {self.process.returncode}."
             )
-            self.process.kill()
+        except asyncio.TimeoutError:
+            log.warning(
+                f"Server process {self.process.pid} did not exit gracefully after 10s, sending SIGKILL."
+            )
             try:
-                exit_code = self.process.wait(timeout=5)  # Wait for kill confirmation
-                log.debug(f"Server process killed, exit code {exit_code}.")
-            except subprocess.TimeoutExpired:
-                log.error("Server process did not terminate even after kill.")
+                self.process.kill()
+                # Wait briefly for kill to register
+                await asyncio.wait_for(self.process.wait(), timeout=5)
+                log.debug(
+                    f"Server process {self.process.pid} killed, exit code {self.process.returncode}."
+                )
+            except asyncio.TimeoutError:
+                log.error(
+                    f"Server process {self.process.pid} did not terminate even after kill."
+                )
+            except Exception as inner_e:
+                log.error(f"Error waiting for killed process: {inner_e}", exc_info=True)
         except Exception as e:
-            log.error(f"Error during server shutdown: {e}", exc_info=True)
+            # Catch potential errors like ProcessLookupError if already dead
+            log.error(
+                f"Error terminating server process {self.process.pid}: {e}",
+                exc_info=True,
+            )
         finally:
-            self.process = None  # Ensure process is marked as None
+            self.process = None
 
-    def _wait_for_server_ready(self, timeout: float = 30.0) -> None:
+    async def _wait_for_server_ready(self, timeout: float = 30.0) -> None:
         """Wait until the gRPC port is open or timeout expires."""
-        if not self.process:
-            raise RuntimeError("Server process not started.")
+        if not self.process or not self.process.stderr:
+            raise RuntimeError("Server process or stderr not available.")
 
         start_time = time.monotonic()
-        while True:
-            # Check if process exited prematurely
-            if self.process.poll() is not None:
-                stderr_output = ""
-                if self.process.stderr:
-                    try:
-                        stderr_output = self.process.stderr.read().decode(
-                            errors="replace"
-                        )
-                    except Exception:
-                        pass  # Ignore errors reading stderr
-                raise RuntimeError(
-                    f"Server process exited prematurely with code {self.process.returncode}. Stderr: {stderr_output}"
-                )
+        # Task to concurrently read stderr
+        stderr_task = asyncio.create_task(self._read_stderr(self.process.stderr))
 
-            # Check if port is open
-            try:
-                with socket.create_connection(
-                    (self.ip, self.port), timeout=0.1
-                ) as sock:
+        try:
+            while True:
+                # Check if process exited prematurely
+                if self.process.returncode is not None:
+                    stderr_output = await stderr_task  # Get collected stderr
+                    raise RuntimeError(
+                        f"Server process exited prematurely with code {self.process.returncode}. Stderr: {stderr_output}"
+                    )
+
+                # Check if port is open
+                try:
+                    reader, writer = await asyncio.open_connection(self.ip, self.port)
+                    writer.close()
+                    await writer.wait_closed()
                     log.debug(
                         f"Successfully connected to {self.target}, server is ready."
                     )
                     return  # Port is open
-            except (socket.timeout, ConnectionRefusedError, OSError):
-                pass  # Port not yet open
+                except (ConnectionRefusedError, OSError):
+                    pass  # Port not yet open
 
-            # Check timeout
-            if time.monotonic() - start_time >= timeout:
-                raise TimeoutError(
-                    f"Server did not become ready on {self.target} within {timeout} seconds."
-                )
+                # Check timeout
+                elapsed = time.monotonic() - start_time
+                if elapsed >= timeout:
+                    stderr_output = await stderr_task
+                    raise TimeoutError(
+                        f"Server did not become ready on {self.target} within {timeout} seconds. Stderr: {stderr_output}"
+                    )
 
-            # Wait briefly before retrying
-            time.sleep(0.2)
+                # Wait briefly before retrying
+                await asyncio.sleep(0.2)
+        finally:
+            # Ensure stderr task is cancelled and awaited
+            if not stderr_task.done():
+                stderr_task.cancel()
+                try:
+                    await stderr_task
+                except asyncio.CancelledError:
+                    pass  # Expected
+                except Exception as e:
+                    log.warning(f"Error awaiting cancelled stderr task: {e}")
+
+    async def _read_stderr(self, stream: asyncio.StreamReader) -> str:
+        """Read stderr stream asynchronously."""
+        lines = []
+        try:
+            while True:
+                # Add a timeout to readline to prevent hanging if process closes stderr unexpectedly
+                try:
+                    line = await asyncio.wait_for(stream.readline(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    # If timeout occurs, check if process is still running before assuming EOF
+                    if self.process and self.process.returncode is None:
+                        continue
+                    else:
+                        log.debug("Stderr readline timeout and process exited.")
+                        break  # Process likely exited
+
+                if not line:
+                    log.debug("EOF reached on stderr stream.")
+                    break
+                decoded_line = line.decode(errors="replace").strip()
+                lines.append(decoded_line)
+                log.debug(f"Server stderr: {decoded_line}")
+        except asyncio.CancelledError:
+            log.debug("Stderr reading task cancelled.")
+            raise  # Re-raise cancellation
+        except Exception as e:
+            log.warning(f"Error reading server stderr: {e}", exc_info=True)
+        return "\n".join(lines)
