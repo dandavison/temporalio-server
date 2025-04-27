@@ -3,6 +3,20 @@ revision = 1
 requires-python = ">=3.9"
 
 [[package]]
+name = "dandavison-temporalio-server"
+version = "0.1.0"
+source = { editable = "." }
+
+[package.optional-dependencies]
+examples = [
+    { name = "temporalio" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "temporalio", marker = "extra == 'examples'", specifier = ">=1.0.0" }]
+provides-extras = ["examples"]
+
+[[package]]
 name = "protobuf"
 version = "6.30.2"
 source = { registry = "https://pypi.org/simple" }
@@ -57,17 +71,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/61/3d76f06e16127e288eeabc9cdd099ef12492c0ac75ee73dece2645577b29/temporalio-1.11.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4ae69089b371a8f05f8c1a4519d3d0c6cdda39ca4cdbe2cb322607514ca0122c", size = 12040920 },
     { url = "https://files.pythonhosted.org/packages/b0/d8/020a21063eeefdeaeb39ab2c8c9fd87f4709da33e0ab1b14fad81b734bcd/temporalio-1.11.0-cp39-abi3-win_amd64.whl", hash = "sha256:97ce571d08ba23b0bd088c71eca723ae155721ea5bfa9a733a9a3ad2cf52c14c", size = 12124609 },
 ]
-
-[[package]]
-name = "temporalio-server"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "temporalio" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "temporalio", specifier = ">=1.0.0" }]
 
 [[package]]
 name = "types-protobuf"

@@ -1,7 +1,7 @@
 # /// script
 # dependencies = [
-#   "temporalio-server", # The server wrapper/context manager
-#   "temporalio>=1.0.0", # The SDK itself
+#   "dandavison-temporalio-server", # The distribution package name
+#   "temporalio>=1.0.0",            # The SDK itself
 # ]
 # ///
 

@@ -36,9 +36,9 @@ class CustomBuildHook(BuildHookInterface):
         # Hatchling provides the build directory structure.
         # We need to place the binary relative to the package source root.
         # self.root is the project root.
-        # We assume the package source is under src/<package_name>
-        package_name = self.build_config.builder.metadata.name.replace("-", "_")
-        self.target_dir = Path(self.root) / "src" / package_name / "bin"
+        # The actual source directory is src/temporalio_server, regardless of package name.
+        package_dir_name = "temporalio_server"  # Hardcode the source directory name
+        self.target_dir = Path(self.root) / "src" / package_dir_name / "bin"
         log.info(f"Target directory for binary: {self.target_dir}")
 
         # Clean existing target directory if it exists

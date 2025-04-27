@@ -1,5 +1,5 @@
 [project]
-name = "temporalio-server"
+name = "dandavison-temporalio-server"
 # Use dynamic versioning later if desired
 version = "0.1.0"
 description = "Python wrapper for the Temporal development server CLI"
@@ -29,7 +29,8 @@ classifiers = [
 
 # Define the command-line script entry point
 [project.scripts]
-temporalio-server = "temporalio_server.main:run"
+# Use 'temporal-server' as the command name
+temporal-server = "temporalio_server.main:run" # The code path uses the directory name
 
 [build-system]
 requires = ["hatchling"]
@@ -56,8 +57,11 @@ build-hooks = ["custom"]
 
 # Configure what goes into the source distribution (sdist)
 [tool.hatch.build.targets.sdist]
-# Include the build script itself in the sdist, but not the generated binary dir
-include = ["/fetch_temporal_cli.py"]
+# Include the build script and source code
+include = [
+    "/fetch_temporal_cli.py",
+    "/src/temporalio_server",
+]
 exclude = [
     "/src/temporalio_server/bin",
 ]

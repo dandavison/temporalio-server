@@ -1,62 +1,62 @@
-# Temporal Server Python Wrapper
+# Temporal Server Python Wrapper (Experimental)
 
 _[Experimental AI-generated prototype project; not intended for public use]_
 
-[![PyPI version](https://badge.fury.io/py/temporalio-server.svg)](https://badge.fury.io/py/temporalio-server) <!-- Placeholder badge -->
+[![PyPI version](https://badge.fury.io/py/dandavison-temporalio-server.svg)](https://badge.fury.io/py/dandavison-temporalio-server) <!-- Placeholder badge -->
 
 This package provides a convenient way to install and run the [Temporal](https://temporal.io/) development server (`temporal server start-dev`) via the Python packaging ecosystem, particularly leveraging [uv](https://github.com/astral-sh/uv).
 
-It bundles the official pre-compiled `temporal` CLI binary (currently v1.3.0) for your platform within a Python package.
+It bundles the official pre-compiled `temporal` CLI binary (currently v1.3.0) for your platform within a Python distribution package named `dandavison-temporalio-server`. The actual Python code is importable as `temporalio_server`.
 
 ## Usage
 
-This package provides the `temporalio-server` command, which acts as a wrapper around the underlying `temporal server start-dev` command.
+This package provides the `temporal-server` command, which acts as a wrapper around the underlying `temporal server start-dev` command.
 
 ### Running the Server (Command Line)
 
 The easiest way to run the latest development server without installing it persistently is using `uvx`:
 
 ```bash
-# Run the server with default settings (ports 7233/8233)
-# Note: uvx downloads and runs the package in a temporary environment.
-# You can pass arguments directly to 'start-dev'.
-uvx temporalio-server start-dev
+# Install/run dandavison-temporalio-server, execute its 'temporal-server' command
+uvx dandavison-temporalio-server temporal-server start-dev
 
 # Run with custom ports
-uvx temporalio-server start-dev --port 7234 --ui-port 8234
+uvx dandavison-temporalio-server temporal-server start-dev --port 7234 --ui-port 8234
 ```
 
-Alternatively, you can install the `temporalio-server` command persistently into uv's managed tool environment:
+Alternatively, you can install the tool persistently:
 
 ```bash
-# Install the tool
-uv tool install temporalio-server
+# Install the distribution package
+uv tool install dandavison-temporalio-server
 
-# Now run it directly (may require shell restart or `uv tool update-shell` first)
-temporalio-server start-dev
+# Now run the 'temporal-server' command it provides
+# (may require shell restart or `uv tool update-shell` first)
+temporal-server start-dev
 ```
 
 ### Using the Server in Python (Tests/Scripts)
 
-This package also provides an `async` context manager (`temporalio_server.DevServer`) for programmatically starting and stopping the development server, useful for integration tests or automation scripts.
+This package also provides an `async` context manager (`temporalio_server.DevServer`) for programmatically starting and stopping the development server.
 
-To use the `DevServer` context manager, you need to install the package with the `[examples]` extra, which includes the `temporalio` Python SDK dependency needed for most testing scenarios:
+To use the `DevServer` context manager, you need to install the distribution package `dandavison-temporalio-server` with the `[examples]` extra, which includes the `temporalio` Python SDK dependency:
 
 ```bash
-# Install with the extra dependencies into your project environment
-uv pip install 'temporalio-server[examples]'
+# Install the distribution package with extras
+uv pip install 'dandavison-temporalio-server[examples]'
 
 # Or, if using uv project management, add it to your pyproject.toml:
-# uv add 'temporalio-server[examples]'
+# uv add 'dandavison-temporalio-server[examples]'
 ```
 
-Example usage in Python:
+Example usage in Python (importing from the source module name):
 
 ```python
 import asyncio
 import logging
-# Ensure temporalio is installed via the [examples] extra
+# Ensure temporalio SDK is installed via the [examples] extra
 from temporalio.client import Client
+# Import from the source module name
 from temporalio_server import DevServer
 
 logging.basicConfig(level=logging.INFO)
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-See `example.py` in the repository for a runnable example involving a workflow and activity.
+See `example.py` in the repository for a runnable example.
 
 ## Development
 
