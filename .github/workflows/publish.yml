@@ -2,17 +2,46 @@ name: Publish Python Package to PyPI
 
 on:
   release:
-    types: [published] # Run only when a release is published
+    types: [published]
 
 permissions:
   # IMPORTANT: This permission is needed for uv publish to authenticate with PyPI using OIDC
   id-token: write
 
 jobs:
-  build-and-publish:
-    name: Build and publish Python distributions to PyPI
-    runs-on: ubuntu-latest # Or use a matrix for multi-platform wheels
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Ensure all platforms complete even if one fails
+      fail-fast: false
+      matrix:
+        # cibuildwheel default targets
+        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Used by cibuildwheel to build the wheels
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v1 # Update to v1 (latest stable)
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.19
+        # cibuildwheel automatically invokes the build backend (hatchling)
+        # which runs our custom build hook to download the binary.
+
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: ./wheelhouse/*.whl
+          retention-days: 1 # Keep artifacts briefly
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,12 +49,41 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v1
 
-      - name: Build distributions
-        run: uv build --no-sources
-        # Using --no-sources is recommended for publishing builds
-        # to ensure it works without project-specific index configs.
+      - name: Build sdist
+        run: uv build --sdist --no-sources -o dist/
+
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          retention-days: 1
+
+  publish_pypi:
+    name: Publish distributions to PyPI
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+
+    # Prevent publishing on forks
+    if: github.repository_owner == 'dandavison' # Adjust if your username/org is different
+
+    steps:
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          # Artifacts are stored based on the producing job name
+          # We need to download sdist and all wheel artifacts
+          pattern: cibw-wheels-*
+          path: dist/
+          merge-multiple: true # Combine artifacts into dist/
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist/
 
       - name: Publish distributions to PyPI
-        run: uv publish
-        # No --token or other auth needed; uses OIDC via id-token permission
-        # uv publish will automatically find artifacts in dist/ 
+        run: uv publish dist/*
+        # uv will use OIDC via the id-token permission 
