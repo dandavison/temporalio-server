@@ -26,6 +26,9 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
 
+      - name: Verify Git tag matches pyproject.toml version
+        run: .github/scripts/check_version.py
+
       - name: Build distributions (sdist and wheel)
         run: uv build --no-sources -o dist/
         # This runs the hatchling build hook which downloads the correct
