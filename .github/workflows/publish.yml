@@ -5,7 +5,7 @@ on:
     types: [published]
 
 permissions:
-  # IMPORTANT: This permission is needed for uv publish to authenticate with PyPI using OIDC
+  # Needed for uv publish OIDC authentication
   id-token: write
 
 jobs:
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Prevent publishing on forks
-    if: github.repository_owner == 'dandavison' # Adjust if your username/org is different
+    if: github.repository_owner == 'dandavison' # TODO: Adjust if owner changes
 
     steps:
       - name: Set up uv

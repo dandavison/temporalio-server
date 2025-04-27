@@ -53,8 +53,7 @@ class CustomBuildHook(BuildHookInterface):
             self.download_and_extract()
             log.info("Temporal CLI binary prepared successfully.")
         except Exception as e:
-            log.error(f"Failed to prepare Temporal CLI binary: {e}", exc_info=True)
-            # Raising an exception here will fail the build
+            log.error(f"Failed to prepare Temporal CLI binary: {e}")
             raise
 
     def get_platform_mapping(self):

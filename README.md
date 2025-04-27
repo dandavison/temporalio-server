@@ -2,90 +2,73 @@
 
 _[Experimental AI-generated prototype project; not intended for public use]_
 
-[![PyPI version](https://badge.fury.io/py/dandavison-temporalio-server.svg)](https://badge.fury.io/py/dandavison-temporalio-server) <!-- Placeholder badge -->
+[![PyPI version](https://badge.fury.io/py/dandavison-temporalio-server.svg)](https://badge.fury.io/py/dandavison-temporalio-server)
 
-This package provides a convenient way to install and run the [Temporal](https://temporal.io/) development server (`temporal server start-dev`) via the Python packaging ecosystem, particularly leveraging [uv](https://github.com/astral-sh/uv).
+Installs and runs the Temporal development server (`temporal server start-dev`) via Python packaging (`uv`).
 
-It bundles the official pre-compiled `temporal` CLI binary (currently v1.3.0) for your platform within a Python distribution package named `dandavison-temporalio-server`. The actual Python code is importable as `temporalio_server`.
+Bundles the official pre-compiled `temporal` CLI binary (currently v1.3.0) for your platform within the `dandavison-temporalio-server` distribution package. The Python code is importable as `temporalio_server`.
 
 ## Usage
 
-This package provides the `temporal-server` command, which acts as a wrapper around the underlying `temporal server start-dev` command.
+Provides the `temporal-server` command, wrapping `temporal server start-dev`.
 
-### Running the Server (Command Line)
+### Command Line
 
-The easiest way to run the latest development server without installing it persistently is using `uvx`:
+Run without persistent install using `uvx`:
 
 ```bash
-# Install/run dandavison-temporalio-server, execute its 'temporal-server' command
+# Run with default settings (ports 7233/8233)
 uvx dandavison-temporalio-server temporal-server start-dev
 
 # Run with custom ports
 uvx dandavison-temporalio-server temporal-server start-dev --port 7234 --ui-port 8234
 ```
 
-Alternatively, you can install the tool persistently:
+Install persistently into `uv` tool environment:
 
 ```bash
 # Install the distribution package
 uv tool install dandavison-temporalio-server
 
-# Now run the 'temporal-server' command it provides
-# (may require shell restart or `uv tool update-shell` first)
+# Run the command (may require shell restart/rehash)
 temporal-server start-dev
 ```
 
-### Using the Server in Python (Tests/Scripts)
+### Python (Tests/Scripts)
 
-This package also provides an `async` context manager (`temporalio_server.DevServer`) for programmatically starting and stopping the development server.
+Provides `temporalio_server.DevServer` async context manager.
 
-To use the `DevServer` context manager, you need to install the distribution package `dandavison-temporalio-server` with the `[examples]` extra, which includes the `temporalio` Python SDK dependency:
+Install with `[examples]` extra (includes `temporalio` SDK):
 
 ```bash
-# Install the distribution package with extras
+# Install into project environment
 uv pip install 'dandavison-temporalio-server[examples]'
 
-# Or, if using uv project management, add it to your pyproject.toml:
-# uv add 'dandavison-temporalio-server[examples]'
+# Or add to pyproject.toml for uv add/sync
+# dandavison-temporalio-server = { version = "*", extras = ["examples"] }
 ```
 
-Example usage in Python (importing from the source module name):
+Example usage:
 
 ```python
 import asyncio
-import logging
-# Ensure temporalio SDK is installed via the [examples] extra
 from temporalio.client import Client
-# Import from the source module name
 from temporalio_server import DevServer
 
-logging.basicConfig(level=logging.INFO)
-
 async def main():
-    logging.info("Starting dev server...")
-    # Start server, waits until ready, stops on exit
-    async with DevServer(log_level="info") as server:
-        logging.info(f"Dev server ready at {server.target}")
-
-        # Connect a client (requires temporalio SDK installed)
+    async with DevServer() as server:
         client = await Client.connect(server.target)
-        logging.info("Client connected.")
-
-        # ... your code using the client ...
-        logging.info("Example task finished.")
-
-    logging.info("Dev server stopped.")
+        print(f"Dev server ready at {server.target}")
+        # ... use client ...
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-See `example.py` in the repository for a runnable example.
+See `example.py` for a runnable workflow/activity example.
 
 ## Development
 
-This project uses [`uv`](https://github.com/astral-sh/uv) for environment management and [`hatchling`](https://hatch.pypa.io/latest/) as the build backend.
-
-*   **Setup:** `uv venv && uv sync --all-extras` (to install dev dependencies if any are added)
+*   **Setup:** `uv venv && uv sync --all-extras`
 *   **Build:** `uv build`
 *   **Run Example:** `uv run python example.py`

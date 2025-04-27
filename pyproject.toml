@@ -1,17 +1,13 @@
 [project]
 name = "dandavison-temporalio-server"
-# Use dynamic versioning later if desired
 version = "0.1.0"
 description = "Python wrapper for the Temporal development server CLI"
 readme = "README.md"
 authors = [
     { name = "Dan Davison", email = "dan.davison@temporal.io" }
 ]
-# Updated requires-python to match modern importlib.resources usage
 requires-python = ">=3.9"
-# Core dependencies are now empty, as the main package only provides the wrapper
 dependencies = []
-# Add classifiers for PyPI visibility
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -20,38 +16,29 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent", # Technically depends on binary availability
-    "Development Status :: 4 - Beta", # Or Alpha/Beta as appropriate
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Build Tools",
     "Topic :: System :: Distributed Computing",
 ]
 
-# Define the command-line script entry point
 [project.scripts]
-# Use 'temporal-server' as the command name
-temporal-server = "temporalio_server.main:run" # The code path uses the directory name
+temporal-server = "temporalio_server.main:run"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-# Configure the Hatch build hook
 [tool.hatch.build.hooks.custom]
-# Path relative to pyproject.toml where fetch_temporal_cli.py is located
 path = "fetch_temporal_cli.py"
-# Specify the class within the script that implements the hook interface
 class = "CustomBuildHook"
 
-# Configure what goes into the wheel
 [tool.hatch.build.targets.wheel]
-# Include the main package directory
 packages = ["src/temporalio_server"]
 build-hooks = ["custom"]
 
-# Configure what goes into the source distribution (sdist)
 [tool.hatch.build.targets.sdist]
-# Include the build script and source code
 include = [
     "/fetch_temporal_cli.py",
     "/src/temporalio_server",
@@ -59,11 +46,8 @@ include = [
 exclude = [
     "/src/temporalio_server/bin",
 ]
-# Do NOT run the custom build hook for sdist builds
-# build-hooks = [] # Explicitly empty or omit
 
 [project.optional-dependencies]
-# Add an 'examples' extra that includes the SDK needed for example.py
 examples = [
     "temporalio>=1.0.0",
 ]
