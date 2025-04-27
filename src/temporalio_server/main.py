@@ -62,7 +62,7 @@ def run():
 
         # Pass all command-line arguments received by this script
         # directly to the temporal binary
-        args = [binary_path_str] + sys.argv[1:]
+        args = [binary_path_str] + ["server"] + sys.argv[1:]
 
         log.info(f"Executing: {' '.join(args)}")
 
@@ -87,7 +87,8 @@ def run():
     except KeyboardInterrupt:
         log.info("Received KeyboardInterrupt, exiting.")
         # Let the finally block handle cleanup if needed, exit gracefully
-        sys.exit(0)
+        # Common practice is to exit non-zero on interrupt, e.g., 130 for SIGINT.
+        sys.exit(130)
     except Exception as e:
         log.error(f"Error executing temporal binary: {e}", exc_info=True)
         sys.exit(1)
