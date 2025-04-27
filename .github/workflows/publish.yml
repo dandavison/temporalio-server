@@ -40,7 +40,8 @@ jobs:
       fail-fast: false
       matrix:
         # Platforms to build native wheels for
-        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+        # TODO: Add back ubuntu-latest with manylinux builds, likely using cibuildwheel
+        os: [windows-latest, macos-13, macos-latest]
 
     steps:
       - name: Checkout repository
@@ -51,46 +52,15 @@ jobs:
 
       # No version check needed here if sdist job does it
 
-      - name: Build wheel distribution (non-linux)
-        if: matrix.os != 'ubuntu-latest'
+      - name: Build wheel distribution
+        # No longer needs condition, runs for all OS in matrix
         run: uv build --wheel -o dist/
+        # This runs the hatchling build hook which downloads the correct
+        # binary for the *current* runner OS (matrix.os).
 
-      - name: Publish wheel (non-linux)
-        if: matrix.os != 'ubuntu-latest'
+      - name: Publish wheel to PyPI
+        # No longer needs condition, runs for all OS in matrix
         run: uv publish dist/*.whl
+        # uv will use OIDC via the id-token permission
 
-      # --- Linux Build (inside manylinux container) ---
-      - name: Build manylinux wheel (linux only)
-        if: matrix.os == 'ubuntu-latest'
-        uses: docker://quay.io/pypa/manylinux_2_28_x86_64
-        with:
-          entrypoint: /bin/bash
-          args: >
-            -ec '
-            echo "Inside container..."
-            export PATH="/opt/python/cp311-cp311/bin:$PATH"
-            echo "Installing uv..."
-            curl -LsSf https://astral.sh/uv/install.sh | sh
-            source /root/.cargo/env
-            echo "Checking uv version:"
-            uv --version
-            echo "Building wheel..."
-            cd /github/workspace
-            uv build --wheel -o dist/
-            echo "Listing built wheel:"
-            ls dist/
-            echo "Publishing wheel..."
-            # Need to pass the OIDC token into the container
-            # uv publish should pick up GITHUB_ACTIONS and ID_TOKEN automatically
-            export GITHUB_ACTIONS=true
-            export ACTIONS_ID_TOKEN_REQUEST_URL=$ACTIONS_ID_TOKEN_REQUEST_URL
-            export ACTIONS_ID_TOKEN_REQUEST_TOKEN=$ACTIONS_ID_TOKEN_REQUEST_TOKEN
-            uv publish dist/*.whl
-            echo "Publish command finished."
-            '
-        env:
-          # Pass OIDC environment variables needed by uv publish into the container
-          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
-          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
-
-      # Removed original Publish wheel step for linux 
+      # Removed complex linux/container steps 
