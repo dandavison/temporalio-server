@@ -18,10 +18,10 @@ Run without persistent install using `uvx`:
 
 ```bash
 # Run with default settings (ports 7233/8233)
-uvx dandavison-temporalio-server temporal-server start-dev
+uvx dandavison-temporalio-server start-dev
 
 # Run with custom ports
-uvx dandavison-temporalio-server temporal-server start-dev --port 7234 --ui-port 8234
+uvx dandavison-temporalio-server start-dev --port 7234 --ui-port 8234
 ```
 
 Install persistently into `uv` tool environment:
@@ -31,7 +31,7 @@ Install persistently into `uv` tool environment:
 uv tool install dandavison-temporalio-server
 
 # Run the command (may require shell restart/rehash)
-temporal-server start-dev
+dandavison-temporalio-server start-dev
 ```
 
 ### Python (Tests/Scripts)
