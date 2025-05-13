@@ -1,6 +1,6 @@
 [project]
 name = "dandavison-temporalio-server"
-version = "0.1.12"
+version = "0.1.13"
 description = "Python wrapper for the Temporal development server CLI"
 readme = "README.md"
 authors = [
@@ -24,7 +24,7 @@ classifiers = [
 ]
 
 [project.scripts]
-temporal-server = "temporalio_server.main:run"
+dandavison-temporalio-server = "temporalio_server.main:run"
 
 [build-system]
 requires = ["hatchling"]
